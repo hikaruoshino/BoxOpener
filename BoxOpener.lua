@@ -8,7 +8,7 @@ require('pack')
 local config = require('config')
 local res = require('resources')
 
--- 箱 (大箱【ボウルダー】など) を選んで自動で開け、開けたアイテムを NPC へ交易するアドオン。
+-- 箱 (大箱【ボウルダー】など) を選んで自動で開け、開けたアイテムを NPC へトレードするアドオン。
 -- 動くのは //bo start / //bo give を打ったときだけ。回数を決め、1 回ごとに「かばんの数が減った」ことを確かめてから次へ進む。
 -- 失敗・かばんの空き不足・アイテム切れ・戦闘・ゾーン移動・状態が通常でない のどれかで止まる。//bo stop か Ctrl+Esc でも止まる。
 -- キャラクターの移動・NPC への接近・会話の選択はしない。
@@ -20,10 +20,10 @@ local res = require('resources')
 --   use_timeout  : 開けたあと、かばんの数が減るのを待つ秒数 (これを過ぎると失敗)
 --   key          : true なら、実行中だけ Ctrl+Esc を中断キーにする
 --   autosort     : true なら、かばんの整頓 (同じアイテムをまとめる) を自動でする。ゲームの設定でオートソートを切っていると、開けた中身が端数のまま溜まるため
---   confirm      : true なら、交易のあとの NPC の台詞 (イベント中) を、決定キーを押して閉じる。押すのは交易のあとのイベント中だけで、1 ラウンドに confirm_max 回まで。
+--   confirm      : true なら、トレードのあとの NPC の台詞 (イベント中) を、決定キーを押して閉じる。押すのはトレードのあとのイベント中だけで、1 ラウンドに confirm_max 回まで。
 --                  選択肢のある会話では最初の項目が選ばれてしまうので、そういう NPC では //bo confirm off にして手で閉じる
 --   confirm_key  : 決定キーの名前 (Windower の setkey のキー名。既定 enter)。要確認: ゲーム内未確認
---   sort_every   : 何回 (交易は何ラウンド) ごとに整頓するか。空きが残す枠 + 2 より少ないときも整頓する
+--   sort_every   : 何回 (トレードは何ラウンド) ごとに整頓するか。空きが残す枠 + 2 より少ないときも整頓する
 local defaults = {
     items = '-',
     reserve = 3,
@@ -264,7 +264,7 @@ local function finish(reason, color, sort)
     if j.kind == 'open' then
         say(string.format(L('開封を終了しました (%d 回): %s', 'Stopped opening (%d done): %s'), j.done, reason), color or 167)
     else
-        say(string.format(L('交易を終了しました (%d 個): %s', 'Stopped trading (%d items): %s'), j.done, reason), color or 167)
+        say(string.format(L('トレードを終了しました (%d 個): %s', 'Stopped trading (%d items): %s'), j.done, reason), color or 167)
     end
 end
 
@@ -403,10 +403,10 @@ local function open_step(now)
     j.deadline = now + num(settings.use_timeout, 8)
 end
 
------ 交易 -----
+----- トレード -----
 
--- 渡す相手として良いのは、6 歩以内の NPC だけ。プレイヤー・モンスター・フェイス・ペットは対象外
--- (TradeNPC と同じ判定: is_npc かつ spawn_type が 0x20 のビットを除いて 2 = NPC)。間違えてプレイヤーをターゲットしても、交易を申し込まない
+-- トレードする相手として良いのは、6 歩以内の NPC だけ。プレイヤー・モンスター・フェイス・ペットは対象外
+-- (TradeNPC と同じ判定: is_npc かつ spawn_type が 0x20 のビットを除いて 2 = NPC)。間違えてプレイヤーをターゲットしても、トレードを申し込まない
 local function npc_ok(npc)
     if not (npc and npc.is_npc and npc.valid_target) then return false end
     local st = tonumber(npc.spawn_type) or 0
@@ -439,7 +439,7 @@ local function inv_stacks(id)
     return n
 end
 
--- かばんの、そのアイテムの枠 (装備中は除く) を順に集めて、最大 8 枠ぶんの交易を組み立てる
+-- かばんの、そのアイテムの枠 (装備中は除く) を順に集めて、最大 8 枠ぶんのトレードを組み立てる
 local function build_trade(id, want)
     local items = windower.ffxi.get_items(0)
     local ind, qty = {}, {}
@@ -502,13 +502,13 @@ local function give_step(now)
             return
         end
         if now > j.deadline then
-            return finish(L('交易が成立しませんでした (NPC が受け取らない・遠い・他の行動中)', 'The trade did not go through (NPC did not accept, too far, or busy)'), 123)
+            return finish(L('トレードが成立しませんでした (NPC が受け取らない・遠い・他の行動中)', 'The trade did not go through (NPC did not accept, too far, or busy)'), 123)
         end
         return
     end
 
     if j.state == 'wait_event' then
-        -- 交易のあとのイベントが終わる (状態が通常に戻る) まで待つ。イベントが始まる前に通り過ぎないよう、通常が 1.5 秒続いてから次へ進む
+        -- トレードのあとのイベントが終わる (状態が通常に戻る) まで待つ。イベントが始まる前に通り過ぎないよう、通常が 1.5 秒続いてから次へ進む
         if status_ok() then
             j.idle_since = j.idle_since or now
             if now - j.idle_since >= 1.5 and now - j.event_from >= 1.5 then
@@ -526,7 +526,7 @@ local function give_step(now)
                 j.last_press = now
                 press_confirm()
             elseif now > j.deadline then
-                return finish(L('交易のあとのイベントが終わりません。会話の選択が必要かもしれません', 'The event after the trade did not end; a menu choice may be needed'), 123)
+                return finish(L('トレードのあとのイベントが終わりません。会話の選択が必要かもしれません', 'The event after the trade did not end; a menu choice may be needed'), 123)
             end
         end
         return
@@ -556,7 +556,7 @@ local function give_step(now)
         end
     end
     if have == 0 then
-        return finish(L('渡すアイテムが無くなりました', 'No more items to give'), 207, true)
+        return finish(L('トレードするアイテムが無くなりました', 'No more items to give'), 207, true)
     end
     if free_slots() < num(settings.reserve, 3) then
         return finish(L('かばんの空きが足りません', 'Not enough free inventory slots'), 123, true)
@@ -568,7 +568,7 @@ local function give_step(now)
     local want = j.limit and math.min(j.limit - j.done, have) or have
     local ind, qty = build_trade(j.id, want)
     if #ind == 0 then
-        return finish(L('渡すアイテムが無くなりました', 'No more items to give'), 207, true)
+        return finish(L('トレードするアイテムが無くなりました', 'No more items to give'), 207, true)
     end
     local total = 0
     for _, q in ipairs(qty) do total = total + q end
@@ -627,10 +627,10 @@ local function show_help()
     say(L('//bo add <名前>        開ける箱を足す (Tab のオートトランスレートも可。複数選べる)', '//bo add <name>        add a box to open (Tab auto-translate works; several allowed)'))
     say(L('//bo remove <名前>     選びから外す / //bo clear 全部外す / //bo list 一覧', '//bo remove <name>     deselect / //bo clear all / //bo list'))
     say(L('//bo start [回数]      選んだ箱を開ける (回数を省くと、無くなるまで)', '//bo start [count]     open the selected boxes (no count = until none left)'))
-    say(L('//bo give <数|all> <名前> [@NPC名]  選んだ NPC (ターゲット) へ 8 枠ずつ交易', '//bo give <n|all> <name> [@NPC]  trade to the targeted NPC, 8 stacks at a time'))
+    say(L('//bo give <数|all> <名前> [@NPC名]  選んだ NPC (ターゲット) へ 8 枠ずつトレード', '//bo give <n|all> <name> [@NPC]  trade to the targeted NPC, 8 stacks at a time'))
     say(L('//bo stop             中断 (Ctrl+Esc でも止まる)', '//bo stop             stop (Ctrl+Esc also stops)'))
     say(L('//bo sort [on|off|<回ごと>]  かばんの整頓 (何も付けないと今すぐ整頓。実行中は自動)', '//bo sort [on|off|<n>]  sort the inventory (no argument = sort now; automatic while running)'))
-    say(L('//bo confirm on|off  交易のあとの NPC の台詞を決定キーで閉じる (選択肢のある会話では off)', '//bo confirm on|off  close the NPC message after a trade with the confirm key (turn off for menus)'))
+    say(L('//bo confirm on|off  トレードのあとの NPC の台詞を決定キーで閉じる (選択肢のある会話では off)', '//bo confirm on|off  close the NPC message after a trade with the confirm key (turn off for menus)'))
     say(L('//bo reserve <枠> / interval <秒> / key on|off / lang auto|ja|en / status', '//bo reserve <slots> / interval <sec> / key on|off / lang auto|ja|en / status'))
 end
 
@@ -734,7 +734,7 @@ windower.register_event('addon command', function(cmd, ...)
         if not npc_name then
             local t = windower.ffxi.get_mob_by_target('t')
             if not npc_ok(t) then
-                say(L('渡す相手の NPC をターゲットしてください (6 歩以内。プレイヤー・モンスター・フェイス・ペットには渡しません)', 'Target the NPC to give to (within 6 yalms; never players, monsters, trusts or pets)'), 123)
+                say(L('トレードする相手の NPC をターゲットしてください (6 歩以内。プレイヤー・モンスター・フェイス・ペットにはトレードしません)', 'Target the NPC to give to (within 6 yalms; never players, monsters, trusts or pets)'), 123)
                 return
             end
             npc_id = t.id
@@ -754,7 +754,7 @@ windower.register_event('addon command', function(cmd, ...)
             return
         end
         if start_job({kind = 'give', id = id, limit = limit, done = 0, since_sort = 0, state = 'pick', npc_id = npc_id, npc_name = npc_name}) then
-            say(string.format(L('交易を始めます: %s (%s) → %s。止めるには //bo stop か Ctrl+Esc', 'Start trading: %s (%s) to %s. //bo stop or Ctrl+Esc to stop'),
+            say(string.format(L('トレードを始めます: %s (%s) → %s。止めるには //bo stop か Ctrl+Esc', 'Start trading: %s (%s) to %s. //bo stop or Ctrl+Esc to stop'),
                 item_name(id), limit and tostring(limit) or L('無くなるまで', 'all'), tostring(npc_label)))
         end
     elseif cmd == 'stop' then
@@ -795,7 +795,7 @@ windower.register_event('addon command', function(cmd, ...)
         if v ~= 'on' and v ~= 'off' then say('//bo confirm on|off', 123) return end
         settings.confirm = (v == 'on')
         config.save(settings)
-        say(L('交易のあとの決定キー: ', 'Confirm key after trades: ') .. v)
+        say(L('トレードのあとの決定キー: ', 'Confirm key after trades: ') .. v)
     elseif cmd == 'key' then
         local v = args[1] and args[1]:lower()
         if v ~= 'on' and v ~= 'off' then say('//bo key on|off', 123) return end
