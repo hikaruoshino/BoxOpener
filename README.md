@@ -61,7 +61,7 @@ English follows the Japanese section. → [English](#english)
 - v0.3.3: トレードでも、かばんに足りない分はサッチェルなど他のバッグから持ってくる
 - v0.3.2: 台詞が閉じてターゲットが外れても、始めたときの NPC にトレードを続ける（ターゲットを替えても相手は変わらない）
 - v0.3.1: トレードする相手は NPC だけ（プレイヤー・モンスター・フェイス・ペットは対象外）。始めるときに相手の名前を表示
-- v0.3.0: トレードのあとの決定キー（ゲーム内未確認）
+- v0.3.0: トレードのあとの決定キー（選択肢のない会話で、日本語クライアントで確認済み）
 - v0.2.0: 自動の整頓、開ける間隔の初期値を 3 秒に
 - v0.1.0: 初版
 
@@ -120,7 +120,7 @@ Put the `BoxOpener` folder in `Windower4/addons/` and run `//lua load BoxOpener`
 - v0.3.3: trades also bring in what the inventory lacks from other bags (Satchel etc.)
 - v0.3.2: keeps trading to the NPC it started with even when the target is cleared after a message closes (changing your target does not change the recipient)
 - v0.3.1: only NPCs can be traded to (never players, monsters, trusts or pets); the target's name is shown when starting
-- v0.3.0: confirm key after trades (not yet tested in game)
+- v0.3.0: confirm key after trades (tested in game on the Japanese client, in conversations without a menu)
 - v0.2.0: auto sort; default opening interval is now 3 seconds
 - v0.1.0: first version
 
