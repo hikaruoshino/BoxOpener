@@ -1,4 +1,4 @@
-# BoxOpener (v0.3.8)
+# BoxOpener (v0.3.9)
 
 English follows the Japanese section. → [English](#english)
 
@@ -12,7 +12,7 @@ English follows the Japanese section. → [English](#english)
 動くのは `//bo start` / `//bo give` を打ったときだけです。次のどれかで止まります。
 - 指定した回数・数に達した、開けるアイテム・トレードするアイテムが無くなった
 - かばんの空きが「残す枠」(初期値 3) より少なくなった
-- 開けても（トレードしても）かばんの数が減らない（開封は 2 回続けて、トレードは 8 秒）、他のバッグからの移動が確認できない（6 秒）
+- 開けても（トレードしても）かばんの数が減らない（開封は待ち時間を 2 回過ぎても、トレードは 8 秒）、他のバッグからの移動が確認できない（6 秒）
 - トレードのあとのイベントが終わらない（30 秒、または決定キーを 8 回押しても）
 - 戦闘中・イベント中など、状態が通常でなくなった
 - ゾーンを移動した、NPC が遠い（6 歩より遠い）・いなくなった
@@ -45,7 +45,10 @@ English follows the Japanese section. → [English](#english)
 - 中断キー（Ctrl+Esc）は実行中だけ割り当てます。使いたくないときは `//bo key off`。
 - 表示はクライアントの言語に自動で合わせます。`//bo lang` を変えたあとは `//lua r BoxOpener` で読み込み直してください。
 - 選んだアイテムの種類は確かめません。箱以外（装備や消耗品）を選ぶと、それも `/item` で使い続けます。回数を決めて使ってください。
-- 決定キーの名前・押す回数・整頓の間隔・待つ秒数は `data/settings.xml` の `confirm_key`・`confirm_max`・`sort_every`・`use_timeout` で変えられます。
+- 決定キーの名前・押す回数・整頓の間隔・待つ秒数は `data/settings.xml` の `confirm_key`・`confirm_max`・`sort_every`・`use_timeout` で変えられます。範囲の外の値は、読み込むときに丸めます（`confirm_key` は `enter` だけ、`confirm_max` は 1〜8、`reserve` は 0〜80、`interval` は 1〜30 秒、`use_timeout` は 2〜60 秒、`sort_every` は 1〜100。数でない値・ほかのキーの名前は初期値に戻します）。
+- 開けたあと、待ち時間（`use_timeout`）を過ぎても数が減らないときは、次の `/item` を送らずに、もう 1 回ぶん待ちます（遅れて効いた分を重ねて使わないため）。それでも減らなければ止まります。
+- 整頓のあとは、結果がかばんに反映されるまで 3 秒待ってからトレードを組みます（整頓で枠の並びが変わるため）。
+- `//bo stop` などで止めてから 4 秒は、`//bo start`・`//bo give` を受け付けません（止める前に送った分の結果が遅れて届くため）。少し待ってから打ち直してください。
 - ゲーム内で確かめていないこと: 9 枠を超える連続トレード（2 ラウンド以上）を最後まで通すこと、20 回以上の実行での途中の整頓、英語クライアントでの動作。うまく動かないときは `//bo stop` で止めて報告してください。
 - ゲームの設定でオートソートを切っていると、開けた中身が端数のまま溜まります。そのため実行中は自動で整頓します（`//bo sort off` で切れます）。
 
@@ -53,6 +56,7 @@ English follows the Japanese section. → [English](#english)
 `BoxOpener` フォルダーを `Windower4/addons/` に置き、`//lua load BoxOpener`。
 
 ## 更新履歴
+- v0.3.9: 決定キーは `enter` だけを通す・押す回数の上限を 8 回に（設定値も丸める）・数が減るのを待つ間は `/item` を重ねて送らない・README に整頓のあとの待ち・止めたあとの 4 秒・設定値の丸めを追記。今回の変更は Lua 5.1 の模擬環境で確認しました。ゲーム内での動作は未確認です。
 - v0.3.8: 中断キーの割り当ての外し残しを修正・決定キーはイベント中だけ押す・アンロード/ログアウトの片付け・小数の回数は切り捨て・README の補足
 - v0.3.7: 終わるときにも、かばんを最後に 1 回整頓する（回数が少ない実行でも端数がまとまる）
 - v0.3.6: 数・回数を決めたときは、他のバッグから必要な分だけ持ってくる（枠ごとではない）
@@ -79,7 +83,7 @@ Saves you from pressing a macro hundreds of times to open boxes such as the Boul
 It only runs after you type `//bo start` or `//bo give`. It stops on any of these:
 - the requested count/amount is reached, or no more items to open/give
 - free inventory slots drop below the reserve (default 3)
-- the item count does not drop after using/trading (opening: twice in a row; trading: 8 seconds), or a move into the inventory is not confirmed (6 seconds)
+- the item count does not drop after using/trading (opening: after the wait time passes twice; trading: 8 seconds), or a move into the inventory is not confirmed (6 seconds)
 - the event after a trade does not end (30 seconds, or after 8 confirm key presses)
 - you are not in a normal state (fighting, in an event, etc.), or you change zones
 - the NPC is gone or farther than 6 yalms
@@ -104,7 +108,10 @@ It only runs after you type `//bo start` or `//bo give`. It stops on any of thes
 - Ctrl+Esc is bound only while running. `//bo key off` disables it.
 - Display language follows the client language. After `//bo lang`, reload with `//lua r BoxOpener`.
 - It does not check what kind of item you select. If you pick something that is not a box (gear, consumables), it keeps using that too. Set a count.
-- The confirm key name, number of presses, sort interval and wait seconds can be changed in `data/settings.xml` (`confirm_key`, `confirm_max`, `sort_every`, `use_timeout`).
+- The confirm key name, number of presses, sort interval and wait seconds can be changed in `data/settings.xml` (`confirm_key`, `confirm_max`, `sort_every`, `use_timeout`). Out-of-range values are clamped on load (`confirm_key` accepts `enter` only, `confirm_max` 1-8, `reserve` 0-80, `interval` 1-30 s, `use_timeout` 2-60 s, `sort_every` 1-100; non-numbers and other key names fall back to the defaults).
+- If the count has not dropped when the wait time (`use_timeout`) runs out, it does not send another `/item`; it waits one more period so that a late use is not doubled, and stops if the count still does not drop.
+- After a sort it waits 3 seconds for the inventory to update before building a trade, because sorting changes the slot order.
+- For 4 seconds after a stop (`//bo stop` and so on), `//bo start` and `//bo give` are refused, because results of actions sent before the stop can still arrive. Wait a moment and try again.
 - Not verified in game: trading past 8 stacks (several rounds) all the way to the end, the mid-run sort in runs of 20+ openings, and behavior on the English client. If something goes wrong, stop with `//bo stop` and report it.
 - If auto-sort is off in the game config, opened items pile up as partial stacks, so it sorts automatically while running (`//bo sort off` disables it).
 
@@ -112,6 +119,7 @@ It only runs after you type `//bo start` or `//bo give`. It stops on any of thes
 Put the `BoxOpener` folder in `Windower4/addons/` and run `//lua load BoxOpener`.
 
 ### Changelog
+- v0.3.9: the confirm key accepts `enter` only, at most 8 presses per round (the setting is clamped), no extra `/item` while waiting for the count to drop, README notes on the wait after a sort, the 4 seconds after a stop and setting clamps. This update was tested in a Lua 5.1 simulation. In-game behavior has not been verified for this version.
 - v0.3.8: fixes for a leftover Ctrl+Esc binding, the confirm key is pressed only during events, cleanup on unload/logout, fractional counts are rounded down, README additions
 - v0.3.7: one last sort when a run ends, so short runs also get their partial stacks merged
 - v0.3.6: with an amount/count set, only the needed quantity is brought in from other bags (not a whole stack)
